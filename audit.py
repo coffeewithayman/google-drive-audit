@@ -53,7 +53,12 @@ if __name__ == "__main__":
 		user_name = user['name'].get('givenName', user_email)
 
 		print("\n{}:".format(user_email))
-		public_files = common.get_publicly_shared_files(user_email)
+		
+		try:
+			public_files = common.get_publicly_shared_files(user_email)
+		except Exception as e:
+			print("    Error accessing user's files: {}".format(str(e)))
+			continue
 
 		if public_files:
 			result_elem = ""
@@ -66,4 +71,6 @@ if __name__ == "__main__":
 				output = template.format(name=user_name, result_elem=result_elem, email=user_email)
 				with open("{}/{}.html".format(outdir, user_email), "w") as outfile:
 					outfile.write(output)
+		else:
+			print("    No publicly shared files found")
 	print("\ndone.")
