@@ -1,4 +1,4 @@
-# Google Drive Audit Tool - Common Functions
+# Cool Drive Audit - Common Functions
 # Copyright (C) 2025 Ayman Elsawah
 # 
 # This program is free software: you can redistribute it and/or modify

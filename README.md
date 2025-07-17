@@ -1,4 +1,4 @@
-# Google Drive Audit Tool
+# Cool Drive Audit
 
 This tool performs comprehensive audits of Google Drive files shared publicly across your Google Workspace domain, with options for automated remediation and detailed reporting.
 

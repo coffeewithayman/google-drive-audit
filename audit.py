@@ -1,4 +1,4 @@
-# Google Drive Audit Tool
+# Cool Drive Audit
 # Copyright (C) 2025 Ayman Elsawah
 # 
 # This program is free software: you can redistribute it and/or modify
@@ -194,7 +194,7 @@ def create_google_sheets_report(user_data, admin_email):
 	# Create spreadsheet
 	spreadsheet_body = {
 		'properties': {
-			'title': 'Google Drive Audit Report - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+			'title': 'Cool Drive Audit Report - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 		}
 	}
 	
@@ -254,7 +254,7 @@ def create_google_sheets_report(user_data, admin_email):
 	users_with_files = len([email for email, files in user_data.items() if files])
 	
 	dashboard_data = [
-		['Google Drive Audit Report'],
+		['Cool Drive Audit Report'],
 		[''],
 		['Audit Date:', datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
 		['Domain:', settings.DOMAIN],
@@ -300,7 +300,7 @@ def create_google_sheets_report(user_data, admin_email):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(
-		description='Audit Google Drive files for public sharing across your domain',
+		description='Cool Drive Audit - Audit Google Drive files for public sharing across your domain',
 		usage='%(prog)s [options]\n\nExamples:\n  %(prog)s\n  %(prog)s -f name link\n  %(prog)s -f name link id modified --no-html',
 		formatter_class=argparse.RawDescriptionHelpFormatter
 	)
