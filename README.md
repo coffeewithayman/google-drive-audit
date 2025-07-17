@@ -83,3 +83,11 @@ We need to grant this service account certain scopes that it can use domain-wide
     * this is needed to find publicly-shared files
   * `https://www.googleapis.com/auth/drive`
     * this is needed in order to modify permissions (see `lockdown.py`)
+
+### Enable Google APIs
+
+You will get two errors, one to enable Google SDK API and another to enable Google Drive API.
+
+Click on the links (https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=<client ID>) to enable via console.
+
+
