@@ -48,6 +48,8 @@ if __name__ == "__main__":
 		os.mkdir(outdir)
 
 	users = common.get_domain_users()
+	total_files = 0
+	
 	for user in users:
 		user_email = user['primaryEmail']
 		user_name = user['name'].get('givenName', user_email)
@@ -61,6 +63,7 @@ if __name__ == "__main__":
 			continue
 
 		if public_files:
+			total_files += len(public_files)
 			result_elem = ""
 			for file in public_files:
 				print("    {}".format(format_file_output(file, args.fields)))
@@ -73,4 +76,8 @@ if __name__ == "__main__":
 					outfile.write(output)
 		else:
 			print("    No publicly shared files found")
-	print("\ndone.")
+	
+	print("\nTotal publicly shared files found: {}".format(total_files))
+	if not args.no_html:
+		print("HTML reports generated in: {}".format(outdir))
+	print("done.")
