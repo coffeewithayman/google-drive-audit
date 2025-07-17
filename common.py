@@ -1,3 +1,19 @@
+# Google Drive Audit Tool - Common Functions
+# Copyright (C) 2025 Ayman Elsawah
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from googleapiclient import discovery
 from google.oauth2 import service_account
 
@@ -9,6 +25,7 @@ SCOPES = {
 	"directory": ["https://www.googleapis.com/auth/admin.directory.user.readonly"],
 	"audit": ["https://www.googleapis.com/auth/drive.metadata.readonly"],
 	"lockdown": ["https://www.googleapis.com/auth/drive"],
+	"sheets": ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"],
 }
 
 PUBLIC_PERMISSION_ID = "anyoneWithLink"
