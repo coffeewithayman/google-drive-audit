@@ -23,7 +23,7 @@ _credentials = {"_delegated": {}}
 
 SCOPES = {
 	"directory": ["https://www.googleapis.com/auth/admin.directory.user.readonly"],
-	"audit": ["https://www.googleapis.com/auth/drive.metadata.readonly"],
+	"audit": ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.readonly"],
 	"lockdown": ["https://www.googleapis.com/auth/drive"],
 	"sheets": ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"],
 }
@@ -113,3 +113,49 @@ def filter_folders(files):
 
 def filter_files_unmodified_since(files, cutoff):
 	return [f for f in files if f.get("modifiedTime", "") < cutoff]
+
+def get_shared_drives():
+	"""Get all shared drives in the domain"""
+	drive = discovery.build(
+		"drive",
+		"v3",
+		credentials=delegated_credentials(settings.ADMIN_USERNAME, "audit"))
+	drives = collect_paginated(
+		drive.drives().list,
+		"drives",
+		fields="nextPageToken, drives(id, name)")
+	return drives
+
+def get_publicly_shared_files_from_shared_drive(drive_id, drive_name):
+	"""Get publicly shared files from a specific shared drive"""
+	query = "'{drive_id}' in parents and (visibility='{vis1}' or visibility='{vis2}')".format(
+		drive_id=drive_id,
+		vis1=PUBLIC_PERMISSION_ID,
+		vis2=DISCOVERABLE_PERMISSION_ID)
+	
+	drive = discovery.build(
+		"drive",
+		"v3",
+		credentials=delegated_credentials(settings.ADMIN_USERNAME, "audit"))
+	
+	try:
+		items = collect_paginated(
+			drive.files().list,
+			"files",
+			fields="nextPageToken, files(id, name, webViewLink, permissionIds, permissions, modifiedTime)",
+			q=query,
+			includeItemsFromAllDrives=True,
+			supportsAllDrives=True,
+			corpora="drive",
+			driveId=drive_id)
+		
+		# Add shared drive context to each file
+		for item in items:
+			item['sharedDriveName'] = drive_name
+			item['isSharedDriveFile'] = True
+		
+		return items
+	except Exception as e:
+		if settings.DEBUG:
+			print(f"DEBUG: Error accessing shared drive {drive_name}: {str(e)}")
+		return []

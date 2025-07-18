@@ -52,7 +52,10 @@ def format_file_output(file, fields):
 	output_parts = []
 	
 	if 'name' in fields:
-		output_parts.append(file['name'])
+		name = file['name']
+		if file.get('isSharedDriveFile'):
+			name += f" (Shared Drive: {file['sharedDriveName']})"
+		output_parts.append(name)
 	if 'link' in fields:
 		output_parts.append(file['webViewLink'])
 	if 'id' in fields:
@@ -216,7 +219,10 @@ def create_google_sheets_report(user_data, admin_email):
 	
 	for user_email, files in user_data.items():
 		if files:  # Only create tabs for users with files
-			sheet_title = user_email.split('@')[0][:30]  # Truncate for sheet name limits
+			if user_email == '__SHARED_DRIVES__':
+				sheet_title = 'Shared Drives'
+			else:
+				sheet_title = user_email.split('@')[0][:30]  # Truncate for sheet name limits
 			
 			# Add sheet creation request
 			requests.append({
@@ -228,16 +234,28 @@ def create_google_sheets_report(user_data, admin_email):
 			})
 			
 			# Prepare data for this sheet - always include all fields in sheets
-			headers = ['File Name', 'Share Link', 'File ID', 'Modified Time']
+			if user_email == '__SHARED_DRIVES__':
+				headers = ['File Name', 'Share Link', 'File ID', 'Modified Time', 'Shared Drive']
+			else:
+				headers = ['File Name', 'Share Link', 'File ID', 'Modified Time']
 			rows = [headers]
 			
 			for file in files:
-				row = [
-					file['name'],
-					file['webViewLink'],
-					file['id'],
-					file.get('modifiedTime', 'N/A')
-				]
+				if user_email == '__SHARED_DRIVES__':
+					row = [
+						file['name'],
+						file['webViewLink'],
+						file['id'],
+						file.get('modifiedTime', 'N/A'),
+						file.get('sharedDriveName', 'N/A')
+					]
+				else:
+					row = [
+						file['name'],
+						file['webViewLink'],
+						file['id'],
+						file.get('modifiedTime', 'N/A')
+					]
 				rows.append(row)
 			
 			sheet_data.append((sheet_title, rows))
@@ -251,7 +269,8 @@ def create_google_sheets_report(user_data, admin_email):
 	
 	# Prepare all data for batch update
 	total_files = sum(len(files) for files in user_data.values())
-	users_with_files = len([email for email, files in user_data.items() if files])
+	users_with_files = len([email for email, files in user_data.items() if files and email != '__SHARED_DRIVES__'])
+	shared_drive_files = len(user_data.get('__SHARED_DRIVES__', []))
 	
 	dashboard_data = [
 		['Cool Drive Audit Report'],
@@ -260,16 +279,22 @@ def create_google_sheets_report(user_data, admin_email):
 		['Domain:', settings.DOMAIN],
 		['Total Public Files:', str(total_files)],
 		['Users with Public Files:', str(users_with_files)],
+		['Shared Drive Public Files:', str(shared_drive_files)],
 		[''],
-		['User Summary:'],
-		['User Email', 'Files Count', 'Sheet Tab']
+		['Summary:'],
+		['Source', 'Files Count', 'Sheet Tab']
 	]
 	
 	# Add user summary rows
 	for user_email, files in user_data.items():
 		if files:
-			sheet_name = user_email.split('@')[0][:30]
-			dashboard_data.append([user_email, str(len(files)), sheet_name])
+			if user_email == '__SHARED_DRIVES__':
+				sheet_name = 'Shared Drives'
+				source_name = 'Shared Drives'
+			else:
+				sheet_name = user_email.split('@')[0][:30]
+				source_name = user_email
+			dashboard_data.append([source_name, str(len(files)), sheet_name])
 	
 	# Prepare batch update data
 	batch_data = [
@@ -314,6 +339,8 @@ if __name__ == "__main__":
 		help='console output only, skip HTML report generation')
 	parser.add_argument('--sheets', action='store_true',
 		help='create Google Sheets report with separate tabs for each user')
+	parser.add_argument('--shared-drives-only', action='store_true',
+		help='audit shared drives only, skip individual user files')
 	parser.add_argument('--debug', action='store_true',
 		help='enable debug mode with detailed error messages and API call logging')
 	
@@ -337,40 +364,92 @@ if __name__ == "__main__":
 	total_files = 0
 	sheets_data = {}
 	
-	for user in users:
-		user_email = user['primaryEmail']
-		user_name = user['name'].get('givenName', user_email)
-
-		print("\n{}:".format(user_email))
+	# Process shared drives first
+	print("\nAuditing shared drives...")
+	try:
+		shared_drives = common.get_shared_drives()
+		shared_drive_files = []
 		
-		try:
-			public_files = common.get_publicly_shared_files(user_email)
-		except Exception as e:
-			log_error(e, f"Accessing files for user: {user_email}")
-			print("    Error accessing user's files: {}".format(str(e)))
-			if settings.DEBUG:
-				import traceback
-				print("    DEBUG: Full traceback:")
-				traceback.print_exc()
-			continue
-
-		if public_files:
-			total_files += len(public_files)
-			sheets_data[user_email] = public_files
-			result_elem = ""
-			for file in public_files:
-				print("    {}".format(format_file_output(file, args.fields)))
-				if not args.no_html:
-					result_elem += "<li><a href=\"{link}\">{name}</a></li>\n".format(link=file['webViewLink'], name=file['name'])
+		for drive in shared_drives:
+			print(f"\nShared Drive: {drive['name']}")
+			try:
+				drive_files = common.get_publicly_shared_files_from_shared_drive(drive['id'], drive['name'])
+				if drive_files:
+					shared_drive_files.extend(drive_files)
+					for file in drive_files:
+						print("    {}".format(format_file_output(file, args.fields)))
+				else:
+					print("    No publicly shared files found")
+			except Exception as e:
+				log_error(e, f"Accessing shared drive: {drive['name']}")
+				print(f"    Error accessing shared drive: {str(e)}")
+		
+		if shared_drive_files:
+			total_files += len(shared_drive_files)
+			sheets_data['__SHARED_DRIVES__'] = shared_drive_files
 			
 			if not args.no_html:
-				output = template.format(name=user_name, result_elem=result_elem, email=user_email)
-				with open("{}/{}.html".format(outdir, user_email), "w") as outfile:
+				result_elem = ""
+				for file in shared_drive_files:
+					result_elem += "<li><a href=\"{link}\">{name}</a> (Shared Drive: {drive})</li>\n".format(
+						link=file['webViewLink'], 
+						name=file['name'],
+						drive=file['sharedDriveName'])
+				
+				output = template.format(
+					name="Shared Drives", 
+					result_elem=result_elem, 
+					email="shared-drives@" + settings.DOMAIN)
+				with open("{}/shared-drives.html".format(outdir), "w") as outfile:
 					outfile.write(output)
-		else:
-			print("    No publicly shared files found")
+		
+		print(f"\nTotal shared drive files: {len(shared_drive_files)}")
+		
+	except Exception as e:
+		log_error(e, "Processing shared drives")
+		print(f"Error processing shared drives: {str(e)}")
 	
-	print("\nTotal publicly shared files found: {}".format(total_files))
+	if not args.shared_drives_only:
+		print("\nAuditing user files...")
+		for user in users:
+			user_email = user['primaryEmail']
+			user_name = user['name'].get('givenName', user_email)
+
+			print("\n{}:".format(user_email))
+			
+			try:
+				public_files = common.get_publicly_shared_files(user_email)
+			except Exception as e:
+				log_error(e, f"Accessing files for user: {user_email}")
+				print("    Error accessing user's files: {}".format(str(e)))
+				if settings.DEBUG:
+					import traceback
+					print("    DEBUG: Full traceback:")
+					traceback.print_exc()
+				continue
+
+			if public_files:
+				total_files += len(public_files)
+				sheets_data[user_email] = public_files
+				result_elem = ""
+				for file in public_files:
+					print("    {}".format(format_file_output(file, args.fields)))
+					if not args.no_html:
+						result_elem += "<li><a href=\"{link}\">{name}</a></li>\n".format(link=file['webViewLink'], name=file['name'])
+				
+				if not args.no_html:
+					output = template.format(name=user_name, result_elem=result_elem, email=user_email)
+					with open("{}/{}.html".format(outdir, user_email), "w") as outfile:
+						outfile.write(output)
+			else:
+				print("    No publicly shared files found")
+	else:
+		print("\nSkipping user auditing (shared drives only mode)")
+	
+	if args.shared_drives_only:
+		print("\nTotal shared drive files found: {}".format(total_files))
+	else:
+		print("\nTotal publicly shared files found: {}".format(total_files))
 	
 	if args.sheets and sheets_data:
 		print("Creating Google Sheets report...")
@@ -386,5 +465,8 @@ if __name__ == "__main__":
 				traceback.print_exc()
 	
 	if not args.no_html:
-		print("HTML reports generated in: {}".format(outdir))
+		if args.shared_drives_only:
+			print("HTML report for shared drives generated in: {}".format(outdir))
+		else:
+			print("HTML reports generated in: {}".format(outdir))
 	print("done.")
