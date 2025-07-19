@@ -29,6 +29,9 @@ python3 audit.py -f name link id modified
 # Generate Google Sheets report
 python3 audit.py --sheets
 
+# Audit shared drives only
+python3 audit.py --shared-drives-only
+
 # Console output only (no HTML)
 python3 audit.py --no-html -f name link
 
@@ -135,6 +138,7 @@ LOCKDOWN_GRACE_DAYS = 180  # Days before files are eligible for lockdown
 - `--fields`, `-f`: Output fields (name, link, id, modified)
 - `--no-html`: Skip HTML report generation
 - `--sheets`: Create Google Sheets report
+- `--shared-drives-only`: Audit shared drives only, skip individual user files
 - `--debug`: Enable debug mode with detailed error messages
 - `--help`: Show help message with examples
 
@@ -145,6 +149,9 @@ python3 audit.py
 
 # Custom fields with Google Sheets
 python3 audit.py -f name link modified --sheets
+
+# Audit only shared drives
+python3 audit.py --shared-drives-only
 
 # Debug mode for troubleshooting
 python3 audit.py --debug --sheets
