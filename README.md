@@ -106,11 +106,7 @@ Configure the service account to impersonate users across your domain:
 3. Enter your service account's Client ID (from the JSON file)
 4. Add these OAuth scopes:
    ```
-   https://www.googleapis.com/auth/admin.directory.user.readonly
-   https://www.googleapis.com/auth/drive.metadata.readonly
-   https://www.googleapis.com/auth/drive
-   https://www.googleapis.com/auth/spreadsheets
-   https://www.googleapis.com/auth/drive.file
+   https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/drive.metadata.readonly,https://www.googleapis.com/auth/spreadsheets,https://www.googleapis.com/auth/drive.file
    ```
 
 **Scope Purposes:**
